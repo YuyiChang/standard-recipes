@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+from optuna.integration import PyTorchLightningPruningCallback
 
 ##### argument parser
 class StandardArgParser(ArgumentParser):
@@ -41,7 +42,9 @@ class StandardTrainer(pl.Trainer):
                  log_dir=None, 
                  debug=None, 
                  monitored_loss=['val_loss_epoch'], 
-                 custom_cb=list(), 
+                 custom_cb=list(),
+                 trial = None,
+                 prune_monitor = None, 
                  *args, **kwargs):
         ## checkpointing behaviors
         cbs = []
@@ -71,7 +74,15 @@ class StandardTrainer(pl.Trainer):
         lr_monitor = LearningRateMonitor(logging_interval='step')
         cbs.append(lr_monitor)
 
-        cbs = cbs.append(custom_cb)
+        if trial is not None:
+            chpt_opt_prun = PyTorchLightningPruningCallback(trial, monitor = prune_monitor)# if trial else []
+            cbs.append(chpt_opt_prun)
+
+        print('&&&&&&&&&&&&', cbs)
+
+        # for cb in custom_cb:
+        #     cbs.append(cb)
+        #     print('*********', cbs) #jw addition
 
         super().__init__(accelerator='cuda', 
                          devices=devices if devices is not None else sargs.gpus, 
